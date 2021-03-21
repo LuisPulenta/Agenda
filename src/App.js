@@ -1,6 +1,6 @@
-import React, {useState} from 'react'
+import React, {useState,useEffect} from 'react'
 import { isEmpty,size } from 'lodash'
-import shortid, { isValid } from 'shortid'
+import { addDocument,deleteDocument,getCollection, updateDocument } from './actions'
 
 function App() {
   const [agenda, setAgenda] = useState("") 
@@ -8,6 +8,15 @@ function App() {
   const [editMode, setEditMode] = useState(false)
   const [id, setId] = useState("")
   const [error, setError] = useState(null)
+
+useEffect(() => {
+ (async () =>{
+   const result = await getCollection("agendas")
+   if(result.statusResponse){
+    setAgendas(result.data)
+   }
+ })()
+}, [])
 
 const validForm =() =>{
   let isValid=true
@@ -20,28 +29,34 @@ const validForm =() =>{
   return isValid
 }
 
-
-const addAgenda=(e)=>{
+const addAgenda= async (e)=>{
   e.preventDefault()
   
 if(!validForm()){
   return
 }
 
-  const newAgenda={
-    id:shortid.generate(),
-    name:agenda
-  }
+const result=await addDocument("agendas",{name:agenda})
+if (!result.statusResponse){
+  setError(result.error)
+  return
+}
 
-  setAgendas([...agendas,newAgenda])
+  setAgendas([...agendas,{id:result.data.id,name:agenda}])
   setAgenda("")
 }
 
-const saveAgenda=(e)=>{
+const saveAgenda=async (e)=>{
     e.preventDefault()
     if(!validForm()){
       return
     }
+  
+  const result = await updateDocument  ("agendas",id,{name:agenda})
+  if (!result.statusResponse){
+    setError(result.error)
+    return
+  }
   const editedAgendas = agendas.map(item => item.id === id ? { id,name:agenda} : item)
   setAgendas(editedAgendas)
   setEditMode(false)
@@ -49,7 +64,13 @@ const saveAgenda=(e)=>{
   setId("")
 }
 
-const deleteAgenda=(id)=>{
+const deleteAgenda=async(id)=>{
+  const result = await deleteDocument("agendas",id)
+  if (!result.statusResponse){
+    setError(result.error)
+    return
+  }
+  
   const filteredAgendas = agendas.filter(agenda =>agenda.id!==id)
   setAgendas(filteredAgendas)
 }
